@@ -218,3 +218,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Lifecore
+firmware/esp32_wifi/secrets.h
+data/sensor_log.csv
+node_modules/
