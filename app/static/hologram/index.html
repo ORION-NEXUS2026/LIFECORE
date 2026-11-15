@@ -1,0 +1,16 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html,body{margin:0;height:100%;background:radial-gradient(ellipse at 50% 38%,#ffffff 0%,#eef3fb 55%,#d9e4f5 100%);overflow:hidden;font-family:"Chakra Petch","Segoe UI",system-ui,sans-serif}
+  #root{position:absolute;inset:0}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  #hud{pointer-events:none}
+  .crt{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(11,61,145,.035) 0 1px,transparent 1px 3px)}
+  .vig{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 62%,rgba(11,61,145,.14) 100%)}
+  #load{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#cfe2ff;font-size:15px}
+  #back{display:none;position:absolute;top:14px;left:50%;transform:translateX(-50%);padding:7px 16px;border-radius:999px;cursor:pointer;border:1.5px solid #0B3D91;background:#ffffff;color:#0B3D91;font:600 13px "Chakra Petch","Segoe UI",sans-serif}
+</style></head><body>
+<div id="root"><canvas id="gl"></canvas><canvas id="hud"></canvas><div class="crt"></div><div class="vig"></div>
+<div id="load">Cargando modelo anatómico…</div><button id="back">← Volver al cuerpo</button></div>
+<script>document.write('<script src="holo.js?v='+(new URLSearchParams(location.search).get("v")||Date.now())+'"><\/script>')</script>
+</body></html>
