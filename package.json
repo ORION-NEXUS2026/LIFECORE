@@ -1,0 +1,11 @@
+{
+  "name": "lifecore-hologram",
+  "private": true,
+  "license": "MIT",
+  "description": "Build script for the Lifecore 3D hologram (Three.js bundle).",
+  "scripts": {
+    "build": "esbuild hologram/src/entry.js --bundle --minify --format=iife --target=es2020 --outfile=app/static/hologram/holo.js"
+  },
+  "dependencies": { "three": "0.187.0" },
+  "devDependencies": { "esbuild": "^0.25.0" }
+}
