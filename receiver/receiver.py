@@ -1,11 +1,3 @@
-"""WiFi receiver for the ESP32 (standard library only).
-
-The ESP32 sends every detected heartbeat over HTTP (POST /latido {"bpm": N}). This program stores it in
-data/sensor_log.csv and exposes the live state (GET /estado) for the hologram and the app.
-
-Usage:  python receiver/receiver.py            (keep it open during the demo)
-Test without the ESP32:  python receiver/receiver.py --simular
-"""
 import csv, json, os, random, sys, threading, time
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -22,7 +14,6 @@ anterior = [None]
 
 
 def calidad_de(bpm):
-    """Quality flag: plausible range (45-160) and no sudden jumps (> 25 bpm)."""
     if bpm < 45 or bpm > 160:
         return "baja"
     if anterior[0] is not None and abs(bpm - anterior[0]) > 25:
@@ -80,7 +71,7 @@ class H(BaseHTTPRequestHandler):
             bpm = int(round(float(datos["bpm"])))
             if not 20 <= bpm <= 250:
                 raise ValueError("bpm fuera de rango")
-        except Exception as e:                      # entrada inválida: se rechaza, no se guarda
+        except Exception as e:
             return self._json({"error": str(e)}, 400)
         registrar(bpm)
         self._json({"ok": True})

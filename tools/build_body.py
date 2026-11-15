@@ -1,10 +1,3 @@
-"""Extracts the structures used by the hologram from the BodyParts3D atlas and writes a compact binary format.
-
-Source: BodyParts3D (CC BY 4.0, DBCLS) via github.com/slorksmo/human-atlas (MIT).
-Usage: python tools/build_body.py <atlas_models_dir> <output_dir> <heart_provenance_json>
-Output: body.json + body.bin (put them in app/static/hologram/). Structures that already belong to the heart model are skipped.
-Genital structures are excluded on purpose (not needed for the cardiovascular demo).
-"""
 import json
 import struct
 import sys
@@ -24,7 +17,6 @@ def chunk(i):
     return chunks[i]
 
 
-# ids ya usados por el modelo del corazón
 prov = json.loads(HEART_PROV.read_text())
 heart_ids = set()
 def walk(o):
@@ -61,12 +53,11 @@ def pick(key, pred):
 
 
 def aplanar_ingle(P):
-    """Suaviza la piel en la región genital (se pierde esa protuberancia; el modelo queda neutro)."""
     P = P.reshape(-1, 3).copy()
     y, ax = P[:, 1], np.abs(P[:, 0])
     t = np.clip((y - 0.74) / (0.90 - 0.74), 0, 1)
-    zlin = 0.035 + 0.057 * t                       # línea suave: pubis -> vientre
-    w = np.clip((0.075 - ax) / 0.035, 0, 1)        # peso lateral (1 en el centro, 0 a >7.5 cm)
+    zlin = 0.035 + 0.057 * t
+    w = np.clip((0.075 - ax) / 0.035, 0, 1)
     w = w * w * (3 - 2 * w)
     inreg = (y > 0.70) & (y < 0.93) & (P[:, 2] > 0.0)
     P[:, 2] = np.where(inreg & (P[:, 2] > zlin), P[:, 2] * (1 - w) + zlin * w, P[:, 2])
@@ -117,7 +108,7 @@ for key, L in groups.items():
         I.append(np.frombuffer(buf, "<u4", ic, p["indices"]) + off)
         off += v
     P = np.concatenate(P).astype("<f4"); N = np.concatenate(N).astype("<i2"); I = np.concatenate(I).astype("<u4")
-    if key == "skin":                                # sin región genital: se retiran los triángulos
+    if key == "skin":
         V = P.reshape(-1, 3); T = I.reshape(-1, 3); c = V[T].mean(axis=1)
         quitar = (np.abs(c[:, 0]) < 0.05) & (c[:, 1] > 0.74) & (c[:, 1] < 0.85) & (c[:, 2] > 0.0)
         print("triángulos genitales retirados:", int(quitar.sum()))

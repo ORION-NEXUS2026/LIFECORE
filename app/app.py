@@ -1,9 +1,3 @@
-"""Lifecore - digital twin of an astronaut's health (educational prototype).
-
-Run from the repository root:  streamlit run app/app.py
-Pages: control center, profile, current state, trends, explainable alerts, simulator, live sensor.
-User-facing text is in Spanish (the team language); see docs/ for the English documentation.
-"""
 from pathlib import Path
 
 import pandas as pd
@@ -20,13 +14,12 @@ from synthetic_data import generar
 from hologram import holograma_html, ATRIBUCION
 
 BASE_DIR = Path(__file__).parent
-ROOT = BASE_DIR.parent                      # repository root
+ROOT = BASE_DIR.parent
 DATA_DIR = ROOT / "data"
 st.set_page_config(page_title="Lifecore", page_icon="🫀", layout="wide", initial_sidebar_state="expanded")
 
-# Paleta clara con azul y rojo "institucional espacial" (solo colores; sin logotipos de ninguna agencia)
 AZUL, AZUL_CL, ROJO, AMBAR, VERDE = "#0B3D91", "#1F6FD1", "#E03A1E", "#D98200", "#14935F"
-CIAN = AZUL_CL          # color principal de las gráficas
+CIAN = AZUL_CL
 
 CSS = """
 <style>
@@ -36,7 +29,6 @@ html, body, [class*="css"], .stMarkdown, p, label { font-family: 'IBM Plex Sans'
 [data-testid="stHeader"] { background: transparent; }
 .block-container { padding-top: 1.4rem; max-width: 1500px; }
 [data-testid="stToolbar"] { display: flex !important; }
-/* el holograma ocupa casi toda la altura de la ventana (mínimo 760 px) y va enmarcado como una pantalla */
 [data-testid="stIFrame"], [data-testid="stElementContainer"]:has(> [data-testid="stIFrame"]) { height: max(760px, calc(100vh - 100px)) !important; }
 [data-testid="stIFrame"] { border: 2px solid #0B3D91 !important; border-radius: 14px; box-shadow: 0 10px 30px rgba(11,61,145,.22); }
 [data-testid="stExpandSidebarButton"] {
@@ -81,7 +73,6 @@ h1, h2, h3 { font-family:'Chakra Petch',sans-serif !important; color:#0B3D91 !im
 st.markdown(CSS, unsafe_allow_html=True)
 
 
-# ------------------------------------------------------------------ datos
 @st.cache_data
 def cargar_sinteticos():
     ruta = DATA_DIR / "synthetic_14_days.csv"
@@ -105,7 +96,6 @@ def hr_sensor(sensor):
     return sensor[(sensor.quality_flag == "ok") & (sensor.variable == "frecuencia_cardiaca")]
 
 
-# ------------------------------------------------------------------ componentes visuales
 def encabezado():
     st.markdown(
         '<div class="hdr"><div><div class="brand">LIFE<b>CORE</b></div>'
@@ -140,12 +130,10 @@ def mostrar_alertas(lista):
 
 
 def vigentes(lista, ultimo_dia):
-    """Alertas que siguen activas en el último día (las que ya se recuperaron no cuentan)."""
     return [a for a in lista if a["hasta"] >= ultimo_dia]
 
 
 def estado_receptor():
-    """Estado del receptor WiFi (receptor.py). None si no está en ejecución."""
     try:
         with urllib.request.urlopen("http://localhost:8000/estado", timeout=0.8) as r:
             return json.loads(r.read())
@@ -157,7 +145,7 @@ def _panel_vivo():
     e = estado_receptor()
     b = base["frecuencia_cardiaca"]
     if e is None or e["edad_s"] is None or e["edad_s"] > 4:
-        st.session_state.pop("vivo_base", None)             # sin señal: se recalibra al volver
+        st.session_state.pop("vivo_base", None)
     if e is None:
         st.warning("El receptor o el dispositivo está apagado.")
         return
@@ -167,7 +155,7 @@ def _panel_vivo():
     rec = e["recientes"] or [e["bpm"]]
     med = float(pd.Series(rec[-12:]).median())
     vb = st.session_state.get("vivo_base")
-    if vb is None and len(rec) >= 20:                       # línea base propia: primeros 20 latidos válidos
+    if vb is None and len(rec) >= 20:
         r = pd.Series(rec[-20:]); m0 = float(r.median()); mad = float((r - m0).abs().median())
         vb = st.session_state["vivo_base"] = {"med": m0, "escala": max(1.4826 * mad, 0.08 * m0)}
     if vb is None:
@@ -183,7 +171,6 @@ panel_vivo = st.fragment(run_every=2)(_panel_vivo) if hasattr(st, "fragment") el
 
 
 def columnas():
-    """Holograma + panel. En modo grande el holograma ocupa todo el ancho y el panel queda debajo."""
     if st.session_state.get("holo_grande"):
         return st.container(), st.container()
     return st.columns([5, 2], gap="medium")
@@ -199,9 +186,9 @@ def holo(bpms, estado, sub, fuente, altura=None, live=False):
     html = holograma_html(bpms, estado, "AST-001", sub, fuente, live=live,
                           base={"med": b["mediana"], "escala": b["escala"], "umbral": an.UMBRAL_Z})
     es_url = html.startswith("/app/static/")
-    if hasattr(st, "iframe"):          # Streamlit reciente
+    if hasattr(st, "iframe"):
         st.iframe(html, height=altura)
-    elif es_url:                       # versiones anteriores: iframe dentro de components.html
+    elif es_url:
         components.html(f'<iframe src="{html}" style="width:100%;height:{altura-6}px;border:0"></iframe>', height=altura)
     else:
         components.html(html, height=altura)
@@ -241,7 +228,6 @@ def estilo_ejes(fig, unidad=""):
 
 HORIZONTE = 7
 
-# ------------------------------------------------------------------ cálculo
 df = cargar_sinteticos()
 dia = an.diario(df)
 base = an.linea_base(dia)
@@ -256,7 +242,6 @@ pagina = st.sidebar.radio("Pantalla", ["Centro de control", "Perfil individual",
                                        "Evolución temporal", "Alertas explicables",
                                        "Simulador", "Sensor en vivo (demo)"])
 
-# ------------------------------------------------------------------ pantallas
 if pagina == "Centro de control":
     sensor = cargar_sensor()
     hs = hr_sensor(sensor)
@@ -268,7 +253,7 @@ if pagina == "Centro de control":
                              help="Mueve el gemelo por la misión: el cuerpo y las alertas cambian con el día.")
         corte = dias[k - 1]
         dia_k = dia[dia.dia <= corte]
-        al_k = an.alertas(dia_k, base)                       # solo lo que se sabía ese día
+        al_k = an.alertas(dia_k, base)
         dz_k = an.con_z(dia_k, base)
         ult_k = {v: dz_k[dz_k.variable == v].sort_values("dia").iloc[-1] for v in an.VARIABLES}
         hr_al = any(x["variable"] == "frecuencia_cardiaca" for x in al_k)
@@ -351,7 +336,6 @@ elif pagina == "Simulador":
                             "(+38 % el día del aterrizaje en los astronautas del Transbordador).")
     proys = {v: an.proyectar(sim, base, v, HORIZONTE, entorno=entorno) for v in an.VARIABLES}
     s1, s2 = st.columns([2, 1])
-    # Only situations that make sense where the astronaut is: no launch in orbit or on landing, nothing from the ISS on Earth
     permitidas = {"tendencia": list(an.SITUACIONES), "orbita": ["eva", "ejercicio", "sueno_iss"], "regreso": []}[entorno]
     sit = s1.selectbox("Situación de misión (datos de la NASA)", ["ninguna"] + permitidas, key=f"sit_{entorno}",
                        format_func=lambda s: "Ninguna" if s == "ninguna" else an.SITUACIONES[s]["nombre"],
@@ -366,7 +350,6 @@ elif pagina == "Simulador":
         st.markdown(f'<div class="ok"><b>{S["nombre"]}.</b> {rango}{S["texto"]}<br>'
                     f'<small>Fuente: {S["fuente"]}</small></div>', unsafe_allow_html=True)
         proys = {v: an.aplicar_situacion(p, base, v, sit, dia_ev) for v, p in proys.items()}
-    # With a scenario selected, open directly on the day that shows its effect (event day, or day 1)
     k0 = dia_ev if sit != "ninguna" else (1 if entorno != "tendencia" else 0)
     k = st.slider("Ver el estado dentro de … días", 0, HORIZONTE, k0, key=f"k_{entorno}_{sit}_{dia_ev}",
                   help="0 es el último día con datos; los demás son proyección. Mueve el slider para ver el holograma de cada día futuro.")

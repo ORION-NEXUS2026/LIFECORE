@@ -1,20 +1,16 @@
-/* Lifecore hologram - Three.js scene: BodyParts3D body + anatomical heart with cardiac motion.
- * Color follows the heart rate (gray < 60, blue, yellow 90-100, red from 114 bpm). Live mode polls receiver /estado.
- * Build: npm run build  (writes app/static/hologram/holo.js). Some inline comments are in Spanish. */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-// ------------------------------------------------------------ configuración (por URL)
 let CFG = { bpms: [72], estado: 'normal', etiqueta: 'AST-001', sub: '', fuente: '' };
-try { const raw = new URLSearchParams(location.search).get('cfg'); if (raw) CFG = { ...CFG, ...JSON.parse(raw) }; } catch (e) { /* usa valores por defecto */ }
+try { const raw = new URLSearchParams(location.search).get('cfg'); if (raw) CFG = { ...CFG, ...JSON.parse(raw) }; } catch (e) {  }
 const VER = CFG.v || Date.now();
-const COL_N = [58, 134, 224], COL_A = [224, 58, 30];          // cuerpo: azul institucional (rojo si hay alerta)
-const ACC_N = [86, 164, 242], ACC_A = [224, 58, 30];             // detalles: azul (rojo si hay alerta)
+const COL_N = [58, 134, 224], COL_A = [224, 58, 30];
+const ACC_N = [86, 164, 242], ACC_A = [224, 58, 30];
 const HEX_HEART = 0x56a4f2, HEX_BODY = 0x5aa3ec;
 const CSS_HEART = COL_N.slice(), CSS_ACC = ACC_N.slice();
-// color según los lpm: gris (<60) · azul (normal) · amarillo (90-100) · rojo desde 114 (pulso de pie de los astronautas NASA cercanos al desmayo al aterrizar)
-const ZONAS = [  // [lpm, cuerpo, detalle]
+
+const ZONAS = [
   [50, [170, 182, 200], [196, 206, 222]], [58, [170, 182, 200], [196, 206, 222]],
   [64, [58, 134, 224], [86, 164, 242]], [78, [58, 134, 224], [86, 164, 242]],
   [88, [236, 172, 0], [246, 196, 50]], [100, [236, 172, 0], [246, 196, 50]],
@@ -31,13 +27,12 @@ function colorPorLpm(b) {
 }
 const nombreZona = (b) => b < 60 ? 'BAJO' : b < 80 ? 'NORMAL' : b < 100 ? 'SUBIENDO' : b < 114 ? 'ALTO' : 'MUY ALTO';
 
-const accCol = new THREE.Color(0x1f6fd1);           // se mezcla con el color de alerta según el estado
+const accCol = new THREE.Color(0x1f6fd1);
 let stateK = CFG.estado === 'alerta' ? 1 : 0, stateTarget = stateK;
 const lerp = (a, b, t) => a + (b - a) * t;
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 
-// ------------------------------------------------------------ escena
 const root = document.getElementById('root');
 const glCanvas = document.getElementById('gl'), hud = document.getElementById('hud'), hctx = hud.getContext('2d');
 const loadEl = document.getElementById('load'), backBtn = document.getElementById('back');
@@ -82,9 +77,8 @@ function holoMat(color, base, rimA, lines, side = THREE.FrontSide, power = 2.2) 
   });
 }
 
-// ------------------------------------------------------------ material de tejido (corazón)
 const beatU = { value: 0 };
-// movimiento cardiaco: tiempo desde el último latido y geometría de referencia (se calcula al cargar)
+
 const heartU = { uTms: { value: 5000 }, uTs: { value: 1 }, uCV: { value: new THREE.Vector3() }, uAxis: { value: new THREE.Vector3(0, -1, 0) }, uCA: { value: new THREE.Vector3() } };
 const sm = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const envAtria = t => Math.exp(-Math.pow((t - 25) / 38, 2));
@@ -95,7 +89,7 @@ function tissueMat(look, kind = 0) {
     clearcoat: SOFTWARE ? 0 : (look.coat ?? 0.5), clearcoatRoughness: look.coatRough ?? 0.28,
     sheen: SOFTWARE ? 0 : (look.sheen ?? 0.3), sheenColor: new THREE.Color(look.sheenColor ?? '#a86a60'), sheenRoughness: 0.6, side: THREE.DoubleSide
   });
-  m.defines = { USE_TISSUE: '' }; 
+  m.defines = { USE_TISSUE: '' };
   const u = { uAO: { value: look.ao ?? 0.85 }, uMottle: { value: look.mottle ?? 0.25 }, uMottleTint: { value: new THREE.Color(look.mottleTint ?? '#6e2a25') },
     uFat: { value: look.fat ?? 0 }, uFatColor: { value: new THREE.Color(look.fatColor ?? '#e2c272') }, uRim: { value: look.rim ?? 0.25 }, uRimColor: { value: new THREE.Color(look.rimColor ?? '#ff6a55') }, uBeat: beatU, uAlert: { value: 0 }, uKind: { value: kind }, ...heartU };
   m.userData.u = u;
@@ -156,10 +150,9 @@ const NODE_LOOK = (n) => {
   if (/cardiac-vein|coronary-sinus/.test(n)) return 'cvein';
   if (/vena-cava|pulmonary-vein/.test(n)) return 'vein';
   if (/aorta|aortic-arch|pulmonary-trunk|pulmonary-artery/.test(n)) return 'artery';
-  return null;                    // cámaras, válvulas y músculos papilares: ocultos dentro de la pared
+  return null;
 };
 
-// ------------------------------------------------------------ grupos y carga
 const HEART_ORIGIN = new THREE.Vector3(0.0214, 1.305, 0.0234);
 const heartG = new THREE.Group(); heartG.position.copy(HEART_ORIGIN);
 const pulse = new THREE.Group(); heartG.add(pulse); scene.add(heartG);
@@ -195,7 +188,7 @@ async function load() {
     const mesh = new THREE.Mesh(geom, holoMat(...st.slice(0, 6))); mesh.renderOrder = st[6]; mesh.frustumCulled = false; bodyGroup.add(mesh);
     if (name === 'skin') { bodyBox = geom.boundingBox.clone(); skinMat = mesh.material; }
   }
-  // corazón anatómico
+
   const kindOf = (n) => /ventricular-wall|coronary|descending-artery|circumflex|cardiac-vein/.test(n) ? 0 : /atrium-wall/.test(n) ? 1 : /aorta|aortic-arch|pulmonary-trunk|pulmonary-artery/.test(n) ? 2 : 3;
   gltf.scene.traverse((o) => {
     if (!o.isMesh) return;
@@ -206,7 +199,6 @@ async function load() {
   pulse.add(gltf.scene);
 }
 
-// ------------------------------------------------------------ cámara y controles
 const BODY_VIEW = { tx: 0, ty: 0.9, tz: 0, yaw: 0, pitch: 0.08, dist: 3.1 };
 const cam = { ...BODY_VIEW }, goal = { ...BODY_VIEW };
 let focused = false, fade = 1, lastInteract = -1e9, ptr = null, hover = false, ptrXY = null;
@@ -255,26 +247,25 @@ glCanvas.addEventListener('wheel', e => {
   goal.dist = clamp(goal.dist * (1 + Math.sign(e.deltaY) * 0.08), lo, hi);
 }, { passive: false });
 
-// ------------------------------------------------------------ latidos y HUD
 const BPMS = CFG.bpms && CFG.bpms.length ? CFG.bpms : [72];
 let idx = 0, bpmShown = BPMS[0], bpmColor = BPMS[0];
 let lastBeat = performance.now() - 60000 / bpmShown, nextBeat = performance.now() + 300;
 const g = (t, m, s) => { const d = (t - m) / s; return Math.exp(-0.5 * d * d); };
 const wave = t => 0.14 * g(t, -150, 28) - 0.16 * g(t, -22, 8) + 1.0 * g(t, 0, 9) - 0.28 * g(t, 22, 9) + 0.30 * g(t, 190, 40);
 function tick(now) {
-  if (LIVE && liveOn) { nextBeat = now + 1e9; return; }   // en vivo: manda el sensor
-  if (LIVE) { nextBeat = now + 1e9; lastBeat = Math.min(lastBeat, now - 1e7); return; }   // sin señal: no inventa latidos
+  if (LIVE && liveOn) { nextBeat = now + 1e9; return; }
+  if (LIVE) { nextBeat = now + 1e9; lastBeat = Math.min(lastBeat, now - 1e7); return; }
   if (nextBeat > now + 5000) nextBeat = now + 300;
   while (now >= nextBeat) {
     lastBeat = nextBeat; let b = BPMS[idx % BPMS.length]; idx++;
     bpmShown = b;
-    const bt = BPMS.length === 1 ? b + (Math.random() - 0.5) * 3 : b;   // leve variación entre latidos, el número mostrado no cambia
+    const bt = BPMS.length === 1 ? b + (Math.random() - 0.5) * 3 : b;
     nextBeat = lastBeat + 60000 / clamp(bt, 30, 200);
   }
 }
 const hist = []; const WIN = 5200;
-// ---- sensor en vivo (receptor.py): cada latido recibido hace latir el corazón
-const LIVE = CFG.live || null;                 // URL base del receptor, p. ej. http://localhost:8000
+
+const LIVE = CFG.live || null;
 let liveOn = false, liveSeq = -1, liveBpm = null, liveBase = null;
 const CALIB_N = 20;
 const fuenteTxt = () => LIVE ? (liveOn ? 'SENSOR EN VIVO · WiFi' : 'SIN SEÑAL DEL SENSOR · esperando') : CFG.fuente;
@@ -288,9 +279,9 @@ async function poll() {
       if (d.calidad === 'ok') { lastBeat = performance.now(); bpmShown = d.bpm; liveBpm = d.bpm; }
     }
     liveOn = !!fresco;
-    if (!liveOn) { liveBase = null; stateTarget = 0; }         // sin señal: vuelve a normal y se recalibra al volver
+    if (!liveOn) { liveBase = null; stateTarget = 0; }
     if (liveOn && d.recientes) {
-      if (!liveBase && d.recientes.length >= CALIB_N) {        // línea base propia: primeros latidos válidos
+      if (!liveBase && d.recientes.length >= CALIB_N) {
         const r = d.recientes.slice(-CALIB_N), med = mediana(r);
         const mad = mediana(r.map(x => Math.abs(x - med)));
         liveBase = { med, escala: Math.max(1.4826 * mad, 0.08 * med), umbral: (CFG.base && CFG.base.umbral) || 2.5 };
@@ -304,7 +295,6 @@ async function poll() {
 }
 if (LIVE) { setInterval(poll, 200); }
 
-// etiquetas: [texto, estructura, dirección del punto más extremo]
 const LABEL_DEFS = [
   ['Aorta', 'aortic-arch', [0.2, 1, -0.1]], ['Arteria pulmonar', 'pulmonary-trunk', [0.4, 1, 0.5]], ['Vena cava superior', 'superior-vena-cava', [-0.3, 1, 0.3]],
   ['Aurícula derecha', 'right-atrium-wall', [-1, 0.2, 0.5]], ['Aurícula izquierda', 'left-atrium-wall', [1, 1, 0.1]],
@@ -393,7 +383,6 @@ function drawHUD(now, env, focusAmt) {
   [[o, o, 1, 1], [W - o, o, -1, 1], [o, H - o, 1, -1], [W - o, H - o, -1, -1]].forEach(k => { c.beginPath(); c.moveTo(k[0], k[1] + k[3] * L); c.lineTo(k[0], k[1]); c.lineTo(k[0] + k[2] * L, k[1]); c.stroke(); });
 }
 
-// ------------------------------------------------------------ suelo y bucle
 const floor = new THREE.Group();
 for (const r of [0.16, 0.27, 0.38]) {
   const ringM = new THREE.MeshBasicMaterial({ color: 0x1f6fd1, transparent: true, opacity: 0.4, blending: THREE.NormalBlending, depthWrite: false, side: THREE.DoubleSide });
@@ -410,7 +399,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - tPrev) / 1000); tPrev = now;
   tick(now);
   const tms = now - lastBeat;
-  const ts = clamp(Math.sqrt((60000 / clamp(bpmShown, 30, 200)) / 830), 0.62, 1.3);       // más rápido el ritmo, sístole más corta
+  const ts = clamp(Math.sqrt((60000 / clamp(bpmShown, 30, 200)) / 830), 0.62, 1.3);
   const tH = dbgT != null ? dbgT : tms;
   heartU.uTms.value = Math.min(tH, 5000); heartU.uTs.value = ts;
   const env = envVent(tH / ts) + 0.35 * envAtria(tH / ts);
